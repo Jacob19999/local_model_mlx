@@ -11,7 +11,7 @@
   IMPORTANT: User stories should be PRIORITIZED as user journeys ordered by importance.
   Each user story/journey must be INDEPENDENTLY TESTABLE - meaning if you implement just ONE of them,
   you should still have a viable MVP (Minimum Viable Product) that delivers value.
-  
+
   Assign priorities (P1, P2, P3, etc.) to each story, where P1 is the most critical.
   Think of each story as a standalone slice of functionality that can be:
   - Developed independently
@@ -94,6 +94,18 @@
 
 - **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified - email/password, SSO, OAuth?]
 - **FR-007**: System MUST retain user data for [NEEDS CLARIFICATION: retention period not specified]
+
+### Runtime, CLI & Observability Requirements
+
+- **RCO-001**: Specify the `local-model` command, subcommand, flag, or preset
+  affected by this feature, or state `N/A`.
+- **RCO-002**: Specify which runtime path or backend is in scope (for example
+  stock MLX, TurboQuant, or vision) and the expected fallback when optional
+  dependencies are unavailable.
+- **RCO-003**: Specify any committed metadata changes and any files or directories
+  written under `configs/`, `models/manifests/`, or `models/cache/`.
+- **RCO-004**: Specify the required user-visible progress, logging, benchmark, or
+  doctor output that proves the feature is diagnosable in local use.
 
 ### Key Entities *(include if feature involves data)*
 

@@ -1,0 +1,41 @@
+{
+  "presets": [
+    {
+      "name": "mlx-chat",
+      "runtime": "mlx",
+      "description": "Stock MLX text generation path.",
+      "allow_fallback": false,
+      "model_args": {
+        "max_tokens": 256,
+        "temperature": 0.7
+      }
+    },
+    {
+      "name": "mlx-turbo",
+      "runtime": "turboquant",
+      "description": "Experimental TurboQuant KV cache path for compatible manifests.",
+      "allow_fallback": true,
+      "model_args": {
+        "max_tokens": 256,
+        "temperature": 0.7
+      },
+      "fallback_notice": "TurboQuant was requested but the session degraded to stock MLX."
+    },
+    {
+      "name": "mlx-api",
+      "runtime": "mlx",
+      "description": "Default preset for the local OpenAI-compatible API.",
+      "allow_fallback": false,
+      "model_args": {
+        "max_tokens": 512,
+        "temperature": 0.2
+      }
+    }
+  ],
+  "fallback_policy": {
+    "default_runtime": "mlx",
+    "unsupported_model_message": "The requested model manifest does not declare TurboQuant compatibility.",
+    "unavailable_runtime_message": "TurboQuant is unavailable on this machine; the request can fall back to stock MLX when allowed."
+  }
+}
+
