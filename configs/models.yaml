@@ -1,0 +1,27 @@
+{
+  "supported_sources": {
+    "hf_repo": {
+      "description": "Download from a Hugging Face repository via huggingface_hub.",
+      "requires": ["huggingface_hub"],
+      "placement": "models/cache/<alias>/"
+    },
+    "direct_url": {
+      "description": "Download one or more files from a direct URL into the model cache.",
+      "requires": [],
+      "placement": "models/cache/<alias>/"
+    },
+    "local_dir": {
+      "description": "Register or import a local directory into the model cache.",
+      "requires": [],
+      "placement": "models/cache/<alias>/"
+    }
+  },
+  "manifest_defaults": {
+    "api_visible": true,
+    "default_preset": "mlx-chat",
+    "runtime": "mlx",
+    "supported_runtimes": ["mlx"],
+    "turboquant_compatible": false
+  }
+}
+

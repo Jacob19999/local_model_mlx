@@ -1,0 +1,17 @@
+{
+  "alias": "example-model",
+  "display_name": "Example Model",
+  "source": {
+    "type": "hf_repo",
+    "location": "mlx-community/example-model"
+  },
+  "local_path": "models/cache/example-model",
+  "default_preset": "mlx-chat",
+  "runtime": "mlx",
+  "supported_runtimes": ["mlx", "turboquant"],
+  "turboquant_compatible": true,
+  "api_visible": true,
+  "tags": ["text-generation"],
+  "notes": "Update machine-fit notes and compatibility guidance for each concrete model."
+}
+
