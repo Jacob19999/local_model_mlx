@@ -3,7 +3,8 @@
 **Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
 **Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
 
-**Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/plan-template.md` for the execution workflow.
+**Note**: This template is filled in by the `/speckit.plan` command. See
+`.specify/templates/plan-template.md` for the execution workflow.
 
 ## Summary
 
@@ -21,7 +22,7 @@
 **Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
 **Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
 **Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
+**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]  
 **Project Type**: [e.g., library/cli/web-service/mobile-app/compiler/desktop-app or NEEDS CLARIFICATION]  
 **Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
 **Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
@@ -31,7 +32,17 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- **Runtime Ownership**: Confirm the affected execution logic stays in the Python
+  runtime layer and list the modules or packages that own it.
+- **CLI Control Plane**: List every `local-model` command, subcommand, flag, or
+  preset added or changed, including expected stdout/stderr and structured output.
+- **UI Orchestration Boundary**: Confirm whether the UI only launches existing
+  runtime jobs, or explain the minimal shell changes required if the feature touches
+  `apps/macos-ui/`.
+- **Model Artifact Policy**: Describe any changes to `configs/`,
+  `models/manifests/`, `models/cache/`, ignore rules, or download recipes.
+- **Experimental Backend Safety**: State whether stock MLX, experimental backends,
+  or both are affected, and define the fallback, health-check, and benchmark plan.
 
 ## Project Structure
 
