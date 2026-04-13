@@ -22,13 +22,16 @@ class MLXRunner(BaseRunner):
         command = [
             sys.executable,
             "-m",
-            "mlx_lm.generate",
+            "mlx_lm",
+            "generate",
             "--model",
             str(manifest.cache_path(REPO_ROOT)),
             "--prompt",
             request.prompt,
             "--max-tokens",
             str(request.max_tokens),
+            "--verbose",
+            "false",
         ]
         if request.temperature is not None:
             command.extend(["--temp", str(request.temperature)])

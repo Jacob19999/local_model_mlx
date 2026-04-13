@@ -3,11 +3,11 @@ from __future__ import annotations
 import importlib.util
 import platform
 import sys
-from pathlib import Path
 
-from local_model.config import CACHE_DIR, CONFIG_DIR, FORKS_DIR, MANIFESTS_DIR
+from local_model.config import CACHE_DIR, CONFIG_DIR, FORKS_DIR
 from local_model.models import DiagnosticCheck
 from local_model.registry import list_manifests
+from local_model.services.diagnostics import collect_manifest_checks
 
 
 def _module_available(name: str) -> bool:
@@ -15,11 +15,30 @@ def _module_available(name: str) -> bool:
 
 
 def collect_diagnostics() -> list[DiagnosticCheck]:
+    cache_status = "pass" if CACHE_DIR.exists() else "fail"
+    cache_detail = str(CACHE_DIR)
+    try:
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        probe = CACHE_DIR / ".doctor-write-test"
+        probe.write_text("ok\n", encoding="utf-8")
+        probe.unlink(missing_ok=True)
+    except OSError:
+        cache_status = "fail"
+        cache_detail = f"{CACHE_DIR} (not writable)"
+
     checks = [
         DiagnosticCheck("python", "pass", f"Python {platform.python_version()}"),
         DiagnosticCheck("configs", "pass" if CONFIG_DIR.exists() else "fail", str(CONFIG_DIR)),
-        DiagnosticCheck("cache_dir", "pass" if CACHE_DIR.exists() else "fail", str(CACHE_DIR)),
+        DiagnosticCheck("cache_dir", cache_status, cache_detail),
         DiagnosticCheck("manifests", "pass", f"{len(list_manifests())} registered manifest(s)"),
+        *collect_manifest_checks(),
+        DiagnosticCheck(
+            "huggingface_hub",
+            "pass" if _module_available("huggingface_hub") else "warn",
+            "huggingface_hub importable"
+            if _module_available("huggingface_hub")
+            else "huggingface_hub not installed",
+        ),
         DiagnosticCheck(
             "mlx_lm",
             "pass" if _module_available("mlx_lm") else "warn",
@@ -45,4 +64,3 @@ def collect_diagnostics() -> list[DiagnosticCheck]:
         DiagnosticCheck("platform", "pass" if sys.platform == "darwin" else "warn", sys.platform),
     ]
     return checks
-

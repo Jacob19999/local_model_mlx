@@ -45,6 +45,18 @@ class ModelManifest:
 
 
 @dataclass(slots=True)
+class InstallAttempt:
+    requested_alias: str
+    source_type: str
+    source_location: str
+    destination_path: str
+    copy_files: bool
+    default_preset: str
+    status: str = "pending"
+    error_reason: str | None = None
+
+
+@dataclass(slots=True)
 class ExecutionRequest:
     model_alias: str
     prompt: str
@@ -86,4 +98,3 @@ class DiagnosticCheck:
 
     def to_dict(self) -> dict[str, str]:
         return asdict(self)
-

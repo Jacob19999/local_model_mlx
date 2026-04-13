@@ -1,0 +1,13 @@
+{
+  "alias": "nemotron-3-nano-30b-a3b",
+  "display_name": "Broken Nemotron Fixture",
+  "source": {
+    "type": "hf_repo",
+    "location": "lmstudio-community/NVIDIA-Nemotron-3-Nano-30B-A3B-MLX-4bit"
+  },
+  "local_path": "models/cache/nemotron-3-nano-30b-a3b",
+  "default_preset": "mlx-chat",
+  "runtime": "turboquant",
+  "supported_runtimes": ["mlx"],
+  "turboquant_compatible": false
+}

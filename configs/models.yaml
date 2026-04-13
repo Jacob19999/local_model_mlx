@@ -22,6 +22,22 @@
     "runtime": "mlx",
     "supported_runtimes": ["mlx"],
     "turboquant_compatible": false
-  }
+  },
+  "supported_models": [
+    {
+      "alias": "nemotron-3-nano-30b-a3b",
+      "display_name": "Install Nemotron 3 Nano 30B A3B",
+      "canonical_source": {
+        "type": "hf_repo",
+        "location": "lmstudio-community/NVIDIA-Nemotron-3-Nano-30B-A3B-MLX-4bit"
+      },
+      "default_preset": "mlx-chat",
+      "runtime": "mlx",
+      "supported_runtimes": ["mlx"],
+      "turboquant_compatible": false,
+      "api_visible": true,
+      "tags": ["text-generation", "nemotron", "mlx"],
+      "notes": "Use the MLX-formatted LM Studio community repo as the canonical install source for stock MLX runs on Apple Silicon."
+    }
+  ]
 }
-

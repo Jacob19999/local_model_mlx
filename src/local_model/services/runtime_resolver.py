@@ -10,6 +10,10 @@ def _turbo_available() -> bool:
     return bool(os.environ.get("LOCAL_MODEL_TURBO_COMMAND")) or importlib.util.find_spec("mlx_turboquant") is not None
 
 
+def _mlx_available() -> bool:
+    return importlib.util.find_spec("mlx_lm") is not None
+
+
 def resolve_runtime(
     *,
     manifest: ModelManifest,
@@ -20,6 +24,21 @@ def resolve_runtime(
     target_runtime = requested_runtime or preset.runtime
     allow_fallback = preset.allow_fallback if fallback_allowed is None else fallback_allowed
     notices: list[str] = []
+
+    if target_runtime not in manifest.supported_runtimes:
+        reason = f"Manifest runtime list excludes `{target_runtime}`."
+        if allow_fallback and manifest.runtime in manifest.supported_runtimes:
+            notices.append(
+                f"{target_runtime} requested, but the manifest excludes it; falling back to {manifest.runtime}."
+            )
+            return RuntimeDecision(
+                requested_runtime=target_runtime,
+                active_runtime=manifest.runtime,
+                fallback_used=True,
+                fallback_reason=reason,
+                notices=notices,
+            )
+        raise RuntimeError(reason)
 
     if target_runtime == "turboquant":
         if not manifest.turboquant_compatible:
@@ -61,10 +80,12 @@ def resolve_runtime(
                 )
             raise RuntimeError(reason)
 
+    if target_runtime == "mlx" and not _mlx_available():
+        raise RuntimeError("Stock MLX runtime is unavailable on this machine.")
+
     return RuntimeDecision(
         requested_runtime=target_runtime,
         active_runtime=target_runtime,
         fallback_used=False,
         notices=notices,
     )
-

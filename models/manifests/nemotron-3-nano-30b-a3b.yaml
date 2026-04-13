@@ -8,9 +8,15 @@
   "local_path": "models/cache/nemotron-3-nano-30b-a3b",
   "default_preset": "mlx-chat",
   "runtime": "mlx",
-  "supported_runtimes": ["mlx"],
+  "supported_runtimes": [
+    "mlx"
+  ],
   "turboquant_compatible": false,
   "api_visible": true,
-  "tags": ["text-generation", "nemotron", "mlx"],
-  "notes": "Preferred first-party MLX source. Keep TurboQuant disabled unless explicit compatibility evidence is added later."
+  "tags": [
+    "text-generation",
+    "nemotron",
+    "mlx"
+  ],
+  "notes": "Use the MLX-formatted LM Studio community repo as the canonical install source for stock MLX runs on Apple Silicon."
 }

@@ -3,14 +3,18 @@
 .pytest_cache/
 .ruff_cache/
 .venv/
+venv/
 __pycache__/
 *.egg-info/
 *.log
 *.pyc
+*.tmp
 *.swp
 .vscode/
+.env
+.env.*
 build/
 dist/
-models/cache/*
+# Keep large local model weights out of git even if the nested cache ignore is removed.
+models/cache/**
 !models/cache/.gitignore
-
