@@ -13,6 +13,26 @@ import local_model.runners.mlx_runner as mlx_runner
 import local_model.runners.turbo_runner as turbo_runner
 import local_model.services.install_service as install_service
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+OPENWEBUI_DOC_PATHS = {
+    "readme": REPO_ROOT / "README.md",
+    "agents": REPO_ROOT / "AGENTS.md",
+    "quickstart": REPO_ROOT / "specs" / "003-openwebui-integration" / "quickstart.md",
+    "local_model_cli_contract": REPO_ROOT / "specs" / "003-openwebui-integration" / "contracts" / "local-model-cli.md",
+    "local_model_api_contract": REPO_ROOT / "specs" / "003-openwebui-integration" / "contracts" / "local-model-api.md",
+    "openwebui_onboarding_contract": REPO_ROOT / "specs" / "003-openwebui-integration" / "contracts" / "openwebui-onboarding.md",
+}
+
+
+def assert_contains_all(text: str, snippets: list[str]) -> None:
+    missing = [snippet for snippet in snippets if snippet not in text]
+    assert not missing, f"Missing expected snippets: {missing}"
+
+
+def assert_contains_none(text: str, snippets: list[str]) -> None:
+    unexpected = [snippet for snippet in snippets if snippet in text]
+    assert not unexpected, f"Unexpected snippets present: {unexpected}"
+
 
 @pytest.fixture
 def isolated_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
@@ -59,6 +79,11 @@ def isolated_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(turbo_runner, "REPO_ROOT", repo_root)
 
     return repo_root
+
+
+@pytest.fixture(scope="session")
+def openwebui_docs() -> dict[str, str]:
+    return {name: path.read_text(encoding="utf-8") for name, path in OPENWEBUI_DOC_PATHS.items()}
 
 
 @pytest.fixture

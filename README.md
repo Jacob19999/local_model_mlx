@@ -1,20 +1,15 @@
 # Local Model MLX Workspace
 
 This repository provides a local control plane for Apple Silicon MLX workflows.
-It combines one model registry with four operator surfaces:
+The supported interactive path is the local OpenAI-compatible API plus Open WebUI.
+The native macOS UI has been retired.
 
-- `local-model` CLI for install, register, run, chat, doctor, API, and UI launch
+## Supported Surfaces
+
+- `local-model` CLI for install, register, run, chat, doctor, serving, and migration guidance
 - stock `mlx_lm` generation for the baseline runtime path
 - an optional TurboQuant bridge with explicit fallback behavior
-- a local OpenAI-compatible API and a plain macOS SwiftUI shell
-
-## What It Does
-
-- installs or registers models into `models/cache/`
-- keeps lightweight manifests under `models/manifests/`
-- lets you switch model aliases without changing command families
-- exposes the same registry to CLI, API, and UI clients
-- reports whether a request is running on stock MLX, TurboQuant, or a fallback path
+- a local OpenAI-compatible API for Open WebUI and other compatible clients
 
 ## Repository Layout
 
@@ -24,9 +19,8 @@ It combines one model registry with four operator surfaces:
 - `models/manifests/`: committed model metadata
 - `models/cache/`: downloaded or imported model weights, ignored by git
 - `forks/mlx_turboquant/`: optional TurboQuant integration boundary
-- `apps/macos-ui/`: SwiftUI shell backed by the local API
 - `scripts/bootstrap.sh`: editable install plus `doctor`
-- `scripts/launch_ui.sh`: SwiftUI launcher
+- `scripts/launch_ui.sh`: migration helper that prints the supported Open WebUI workflow
 
 ## Requirements
 
@@ -34,7 +28,7 @@ It combines one model registry with four operator surfaces:
 - macOS / Apple Silicon for the intended MLX workflow
 - `mlx_lm` installed if you want to run stock MLX generation
 - `huggingface_hub` installed if you want `hf_repo` installs
-- Swift / Xcode if you want to launch the macOS UI
+- Open WebUI installed separately if you want the supported browser UI
 
 The package itself currently installs:
 
@@ -90,15 +84,13 @@ local-model run nemotron-3-nano-30b-a3b --prompt "Summarize the active runtime."
 
 ## CLI Reference
 
-Core commands:
-
 ```bash
-local-model doctor
+local-model doctor [--json]
 local-model list-models [--json]
-local-model install <alias> --source-type {hf_repo,direct_url,local_dir} --source <value> [--copy] [--preset mlx-chat] [--turboquant-compatible]
-local-model register <alias> --path <path> --source-type <type> --source <value> [--preset mlx-chat] [--turboquant-compatible]
-local-model run <alias> [--prompt "..."] [--preset <name>] [--runtime {mlx,turboquant}] [--no-fallback]
-local-model chat <alias> [--prompt "..."] [--preset <name>] [--runtime {mlx,turboquant}] [--no-fallback]
+local-model install <alias> --source-type {hf_repo,direct_url,local_dir} --source <value> [--copy] [--preset mlx-chat] [--turboquant-compatible] [--json]
+local-model register <alias> --path <path> --source-type <type> --source <value> [--preset mlx-chat] [--turboquant-compatible] [--notes <text>] [--json]
+local-model run <alias> [--prompt "..."] [--preset <name>] [--runtime {mlx,turboquant}] [--no-fallback] [--json]
+local-model chat <alias> [--prompt "..."] [--preset <name>] [--runtime {mlx,turboquant}] [--no-fallback] [--json]
 local-model serve [--host 127.0.0.1] [--port 8000]
 local-model ui [--api-base-url http://127.0.0.1:8000]
 ```
@@ -107,9 +99,62 @@ Notes:
 
 - `run` and `chat` share the same generation flow today.
 - If `--prompt` is omitted, the CLI reads from stdin or prompts interactively.
-- `--json` is available on `doctor`, `list-models`, `install`, `register`, `run`, and `chat`.
-- `install --copy` copies a local directory into `models/cache/<alias>/`; without it,
-  local directory installs use a symlink.
+- `local-model ui` is a migration notice for the retired native UI path. It prints the supported Open WebUI workflow and exits non-zero.
+- `./scripts/launch_ui.sh` is the shell equivalent of that migration notice.
+
+## Open WebUI Onboarding
+
+1. Ensure at least one model is registered:
+
+```bash
+local-model list-models --json
+```
+
+2. Start the local API:
+
+```bash
+local-model serve --host 127.0.0.1 --port 8000
+```
+
+3. Verify the service before opening Open WebUI:
+
+```bash
+curl http://127.0.0.1:8000/health
+curl http://127.0.0.1:8000/v1/models
+```
+
+4. Start Open WebUI on the same machine:
+
+```bash
+python -m pip install open-webui
+open-webui serve
+```
+
+5. In Open WebUI, add an OpenAI-compatible connection with:
+
+- API URL: `http://127.0.0.1:8000/v1`
+- API key: blank or `none`
+
+If Open WebUI runs in Docker while `local-model serve` runs on the host, use
+`http://host.docker.internal:8000/v1` instead.
+
+6. Pick a discovered model and send a test prompt.
+
+## Troubleshooting
+
+- Service unavailable: run `curl http://127.0.0.1:8000/health` and restart `local-model serve` if it fails.
+- No models visible in Open WebUI: run `curl http://127.0.0.1:8000/v1/models` and `local-model list-models --json` to confirm at least one API-visible manifest is registered.
+- Wrong endpoint configured: replace it with `http://127.0.0.1:8000/v1` for native Open WebUI or `http://host.docker.internal:8000/v1` for Dockerized Open WebUI on the same host.
+- Legacy UI commands used by habit: run `local-model ui` or `./scripts/launch_ui.sh` and follow the printed migration notice instead of expecting a launched app.
+
+## Validation Notes
+
+Validation recorded on 2026-04-12:
+
+- `./.venv/bin/python -m pytest` passed with `23 passed`.
+- `./.venv/bin/python -m local_model ui` printed the Open WebUI migration notice and exited non-zero as intended.
+- `./scripts/launch_ui.sh` printed the shell migration helper output and exited non-zero as intended.
+- The browser-side Open WebUI connection remains an operator-run smoke flow because Open WebUI is an external dependency rather than a bundled repo service.
 
 ## Runtime Presets
 
@@ -177,23 +222,6 @@ curl -X POST http://127.0.0.1:8000/v1/chat/completions \
 The chat response includes the selected model plus runtime metadata for the
 resolved session.
 
-## macOS UI
-
-Launch the SwiftUI shell:
-
-```bash
-local-model ui
-```
-
-Or directly:
-
-```bash
-./scripts/launch_ui.sh
-```
-
-The UI expects Swift to be installed and reads the API base URL from
-`LOCAL_MODEL_API_BASE_URL` when present.
-
 ## Model Manifests and Cache Policy
 
 Model weights and imported directories belong under `models/cache/`. Git-tracked
@@ -230,21 +258,3 @@ Example manifest:
 
 See [models/manifests/README.md](/Users/Apple/Documents/local_model_mlx/models/manifests/README.md)
 for registration rules and required fields.
-
-## Smoke Flow
-
-Minimal end-to-end sequence:
-
-```bash
-local-model doctor
-local-model install nemotron-3-nano-30b-a3b \
-  --source-type hf_repo \
-  --source lmstudio-community/NVIDIA-Nemotron-3-Nano-30B-A3B-MLX-4bit
-local-model run nemotron-3-nano-30b-a3b --prompt "Hello"
-local-model run nemotron-3-nano-30b-a3b --runtime turboquant --no-fallback --prompt "Explain the runtime"
-local-model serve
-local-model ui
-```
-
-More explicit story-based smoke steps live in
-[specs/001-mlx-lm-turboquant-kvcache/quickstart.md](/Users/Apple/Documents/local_model_mlx/specs/001-mlx-lm-turboquant-kvcache/quickstart.md).

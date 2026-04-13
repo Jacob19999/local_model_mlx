@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
-import subprocess
 import sys
 from pathlib import Path
 
@@ -16,6 +14,11 @@ from local_model.runners.turbo_runner import TurboRunner
 from local_model.services.diagnostics import render_manifest_summary, render_runtime_banner
 from local_model.services.install_service import InstallService
 from local_model.services.runtime_resolver import resolve_runtime
+
+DEFAULT_UI_SERVICE_ROOT = "http://127.0.0.1:8000"
+DEFAULT_OPENWEBUI_API_URL = f"{DEFAULT_UI_SERVICE_ROOT}/v1"
+DOCKER_OPENWEBUI_API_URL = "http://host.docker.internal:8000/v1"
+UI_MIGRATION_EXIT_CODE = 1
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -62,8 +65,8 @@ def build_parser() -> argparse.ArgumentParser:
     serve_parser.add_argument("--host", default="127.0.0.1")
     serve_parser.add_argument("--port", type=int, default=8000)
 
-    ui_parser = subparsers.add_parser("ui", help="Launch the macOS UI shell.")
-    ui_parser.add_argument("--api-base-url", default="http://127.0.0.1:8000")
+    ui_parser = subparsers.add_parser("ui", help="Print migration guidance for the retired native UI command.")
+    ui_parser.add_argument("--api-base-url", default=DEFAULT_UI_SERVICE_ROOT)
 
     return parser
 
@@ -216,12 +219,37 @@ def cmd_serve(host: str, port: int) -> int:
     return 0
 
 
+def normalize_openwebui_api_url(api_base_url: str) -> str:
+    normalized = api_base_url.rstrip("/")
+    if normalized.endswith("/v1"):
+        return normalized
+    return f"{normalized}/v1"
+
+
+def build_ui_migration_notice(api_base_url: str) -> list[str]:
+    openwebui_api_url = normalize_openwebui_api_url(api_base_url)
+    service_root = openwebui_api_url.removesuffix("/v1")
+    return [
+        "`local-model ui` has been retired. Use Open WebUI with the local service instead.",
+        "",
+        "Supported workflow:",
+        f"1. Start the API: local-model serve --host 127.0.0.1 --port 8000",
+        f"2. In Open WebUI, add an OpenAI-compatible connection to {openwebui_api_url}",
+        "3. Leave the API key blank or use a placeholder such as `none`.",
+        "4. Select a discovered model and send a test chat from Open WebUI.",
+        "",
+        "Recovery checks:",
+        f"- Service unavailable: verify `curl {service_root}/health` returns `ok`.",
+        f"- No models visible: verify `curl {openwebui_api_url}/models` and `local-model list-models --json`.",
+        f"- Wrong endpoint: correct the Open WebUI connection URL to {openwebui_api_url}.",
+        f"- Dockerized Open WebUI on the same host should use {DOCKER_OPENWEBUI_API_URL}.",
+    ]
+
+
 def cmd_ui(api_base_url: str) -> int:
-    script = Path(__file__).resolve().parents[2] / "scripts" / "launch_ui.sh"
-    env = os.environ.copy()
-    env["LOCAL_MODEL_API_BASE_URL"] = api_base_url
-    completed = subprocess.run([str(script)], env=env)
-    return completed.returncode
+    for line in build_ui_migration_notice(api_base_url):
+        print(line)
+    return UI_MIGRATION_EXIT_CODE
 
 
 def main(argv: list[str] | None = None) -> int:
