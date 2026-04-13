@@ -7,9 +7,9 @@ The native macOS UI has been retired.
 ## Supported Surfaces
 
 - `local-model` CLI for install, register, run, chat, doctor, serving, and migration guidance
-- stock `mlx_lm` generation for the baseline runtime path
+- stock `mlx_lm` generation with native streamed token output for the baseline runtime path
 - an optional TurboQuant bridge with explicit fallback behavior
-- a local OpenAI-compatible API for Open WebUI and other compatible clients
+- a local OpenAI-compatible API for Open WebUI and other compatible clients, including SSE chat streaming and optional reasoning output
 
 ## Repository Layout
 
@@ -176,7 +176,7 @@ If Open WebUI runs in Docker while `local-model serve` runs on the host, use
 
 Validation recorded on 2026-04-12:
 
-- `./.venv/bin/python -m pytest` passed with `23 passed`.
+- `./.venv/bin/python -m pytest` passed with `34 passed`.
 - `./.venv/bin/python -m local_model ui` printed the Open WebUI migration notice and exited non-zero as intended.
 - `./scripts/launch_ui.sh` printed the shell migration helper output and exited non-zero as intended.
 - The browser-side Open WebUI connection remains an operator-run smoke flow because Open WebUI is an external dependency rather than a bundled repo service.
@@ -187,18 +187,17 @@ Configured in [configs/presets.yaml](/Users/Apple/Documents/local_model_mlx/conf
 
 - `mlx-chat`: stock MLX runtime, no fallback
 - `mlx-turbo`: requests TurboQuant and allows fallback to stock MLX
-- `mlx-api`: stock MLX defaults used by the local API
+- `mlx-api`: stock MLX defaults used by the local API, including streamed chat compatibility
+- `mlx-api-reasoning`: stock MLX API preset that advertises `<think>` reasoning support
 
 You can either pick a preset with `--preset` or override runtime choice directly
 with `--runtime`.
 
 ## Stock MLX and TurboQuant
 
-Stock MLX calls:
-
-```bash
-python -m mlx_lm.generate --model <resolved-model-path> --prompt <prompt> --max-tokens <n>
-```
+Stock MLX loads the model through the `mlx_lm` Python package and uses its
+native `stream_generate(...)` surface so streamed API requests emit real
+incremental deltas instead of buffered subprocess output.
 
 TurboQuant is intentionally optional. The bridge in
 [src/local_model/runners/turbo_runner.py](/Users/Apple/Documents/local_model_mlx/src/local_model/runners/turbo_runner.py)
@@ -242,10 +241,17 @@ curl http://127.0.0.1:8000/v1/models
 curl -X POST http://127.0.0.1:8000/v1/chat/completions \
   -H 'content-type: application/json' \
   -d '{"model":"qwen25","messages":[{"role":"user","content":"Hello"}]}'
+curl -N -X POST http://127.0.0.1:8000/v1/chat/completions \
+  -H 'content-type: application/json' \
+  -d '{"model":"qwen25","stream":true,"messages":[{"role":"user","content":"Count to three"}]}'
 ```
 
-The chat response includes the selected model plus runtime metadata for the
-resolved session.
+`/v1/models` now includes capability hints for streaming and reasoning-aware
+configurations. Non-stream chat responses keep the existing single JSON payload,
+while streamed responses emit OpenAI-style `chat.completion.chunk` SSE events
+and terminate with `data: [DONE]`. When a manifest emits `<think>` reasoning,
+the API exposes it separately as `reasoning_content` instead of mixing it into
+the final assistant answer.
 
 ## Model Manifests and Cache Policy
 

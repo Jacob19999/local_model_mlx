@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from local_model.config import MANIFESTS_DIR, load_models_config, read_data_file
-from local_model.models import ModelManifest, ModelSource
+from local_model.models import ModelManifest, ModelSource, RuntimeCapabilityProfile
 
 
 class AliasConflictError(RuntimeError):
@@ -88,11 +88,20 @@ def validate_manifest_payload(payload: dict[str, Any]) -> None:
         raise ManifestValidationError(
             f"Manifest `{alias}` cannot declare turboquant_compatible without a turboquant runtime."
         )
+    capabilities = payload.get("capabilities", {})
+    reasoning_format = str(capabilities.get("reasoning_format", "none"))
+    reasoning_enabled_by_default = bool(capabilities.get("reasoning_enabled_by_default", False))
+    if reasoning_enabled_by_default and reasoning_format == "none":
+        raise ManifestValidationError(
+            f"Manifest `{alias}` cannot enable reasoning by default without declaring a reasoning_format."
+        )
 
 
 def _normalize_manifest_payload(payload: dict[str, Any]) -> dict[str, Any]:
     source = payload.get("source", {})
     defaults = load_models_config().get("manifest_defaults", {})
+    default_capabilities = defaults.get("capabilities", {})
+    raw_capabilities = payload.get("capabilities") or {}
     supported_runtimes = payload.get("supported_runtimes") or [payload.get("runtime", defaults.get("runtime", "mlx"))]
     normalized = {
         "alias": payload.get("alias", ""),
@@ -109,6 +118,20 @@ def _normalize_manifest_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "api_visible": bool(payload.get("api_visible", defaults.get("api_visible", True))),
         "tags": payload.get("tags", []),
         "notes": payload.get("notes", ""),
+        "capabilities": {
+            "supports_streaming": bool(
+                raw_capabilities.get("supports_streaming", default_capabilities.get("supports_streaming", False))
+            ),
+            "reasoning_format": str(
+                raw_capabilities.get("reasoning_format", default_capabilities.get("reasoning_format", "none"))
+            ),
+            "reasoning_enabled_by_default": bool(
+                raw_capabilities.get(
+                    "reasoning_enabled_by_default",
+                    default_capabilities.get("reasoning_enabled_by_default", False),
+                )
+            ),
+        },
     }
     validate_manifest_payload(normalized)
     return normalized
@@ -129,6 +152,8 @@ def build_manifest_payload(
 ) -> dict[str, Any]:
     defaults = load_models_config().get("manifest_defaults", {})
     profile = get_model_profile(alias) or {}
+    default_capabilities = defaults.get("capabilities", {})
+    profile_capabilities = profile.get("capabilities", {})
     runtime = profile.get("runtime", defaults.get("runtime", "mlx"))
     supported_runtimes = list(profile.get("supported_runtimes", defaults.get("supported_runtimes", [runtime])))
     effective_turbo = bool(profile.get("turboquant_compatible", defaults.get("turboquant_compatible", False)))
@@ -151,6 +176,20 @@ def build_manifest_payload(
         "api_visible": profile.get("api_visible", defaults.get("api_visible", True)) if api_visible is None else api_visible,
         "tags": list(tags if tags is not None else profile.get("tags", [])),
         "notes": notes or profile.get("notes", ""),
+        "capabilities": {
+            "supports_streaming": bool(
+                profile_capabilities.get("supports_streaming", default_capabilities.get("supports_streaming", False))
+            ),
+            "reasoning_format": str(
+                profile_capabilities.get("reasoning_format", default_capabilities.get("reasoning_format", "none"))
+            ),
+            "reasoning_enabled_by_default": bool(
+                profile_capabilities.get(
+                    "reasoning_enabled_by_default",
+                    default_capabilities.get("reasoning_enabled_by_default", False),
+                )
+            ),
+        },
     }
     validate_manifest_payload(payload)
     return payload
@@ -159,6 +198,7 @@ def build_manifest_payload(
 def parse_manifest(payload: dict[str, Any]) -> ModelManifest:
     normalized = _normalize_manifest_payload(payload)
     source = normalized["source"]
+    capabilities = normalized["capabilities"]
     return ModelManifest(
         alias=normalized["alias"],
         display_name=normalized["display_name"],
@@ -171,6 +211,11 @@ def parse_manifest(payload: dict[str, Any]) -> ModelManifest:
         api_visible=normalized["api_visible"],
         tags=normalized["tags"],
         notes=normalized["notes"],
+        capabilities=RuntimeCapabilityProfile(
+            supports_streaming=capabilities["supports_streaming"],
+            reasoning_format=capabilities["reasoning_format"],
+            reasoning_enabled_by_default=capabilities["reasoning_enabled_by_default"],
+        ),
     )
 
 

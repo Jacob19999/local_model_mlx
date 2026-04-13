@@ -4,10 +4,11 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Iterator
 
 from local_model.config import load_presets
 from local_model.doctor import collect_diagnostics
-from local_model.models import ExecutionRequest, GenerationResult
+from local_model.models import ExecutionRequest, GenerationDelta, GenerationResult, ModelManifest, RuntimeDecision
 from local_model.registry import get_manifest, list_manifests
 from local_model.runners.mlx_runner import MLXRunner
 from local_model.runners.turbo_runner import TurboRunner
@@ -81,6 +82,43 @@ def _read_prompt_from_stdin() -> str:
     return sys.stdin.read().strip()
 
 
+def prepare_generation(
+    *,
+    model_alias: str,
+    prompt: str,
+    preset_name: str | None,
+    requested_runtime: str | None,
+    fallback_allowed: bool,
+    source: str,
+    max_tokens: int,
+    temperature: float,
+    stream: bool,
+) -> tuple[ExecutionRequest, ModelManifest, RuntimeDecision, MLXRunner | TurboRunner]:
+    presets = load_presets()
+    manifest = get_manifest(model_alias)
+    preset = presets[preset_name or manifest.default_preset]
+    decision = resolve_runtime(
+        manifest=manifest,
+        preset=preset,
+        requested_runtime=requested_runtime,
+        fallback_allowed=fallback_allowed,
+        stream=stream,
+    )
+    request = ExecutionRequest(
+        model_alias=model_alias,
+        prompt=prompt,
+        preset_name=preset.name,
+        requested_runtime=decision.requested_runtime,
+        fallback_allowed=fallback_allowed,
+        source=source,
+        max_tokens=max_tokens,
+        temperature=temperature,
+        stream=stream,
+    )
+    runner = TurboRunner() if decision.active_runtime == "turboquant" else MLXRunner()
+    return request, manifest, decision, runner
+
+
 def generate_once(
     *,
     model_alias: str,
@@ -92,27 +130,43 @@ def generate_once(
     max_tokens: int,
     temperature: float,
 ) -> GenerationResult:
-    presets = load_presets()
-    manifest = get_manifest(model_alias)
-    preset = presets[preset_name or manifest.default_preset]
-    decision = resolve_runtime(
-        manifest=manifest,
-        preset=preset,
-        requested_runtime=requested_runtime,
-        fallback_allowed=fallback_allowed,
-    )
-    request = ExecutionRequest(
+    request, manifest, decision, runner = prepare_generation(
         model_alias=model_alias,
         prompt=prompt,
-        preset_name=preset.name,
-        requested_runtime=decision.requested_runtime,
+        preset_name=preset_name,
+        requested_runtime=requested_runtime,
         fallback_allowed=fallback_allowed,
         source=source,
         max_tokens=max_tokens,
         temperature=temperature,
+        stream=False,
     )
-    runner = TurboRunner() if decision.active_runtime == "turboquant" else MLXRunner()
     return runner.generate(request=request, manifest=manifest, decision=decision)
+
+
+def stream_once(
+    *,
+    model_alias: str,
+    prompt: str,
+    preset_name: str | None,
+    requested_runtime: str | None,
+    fallback_allowed: bool,
+    source: str,
+    max_tokens: int,
+    temperature: float,
+) -> tuple[ModelManifest, RuntimeDecision, Iterator[GenerationDelta]]:
+    request, manifest, decision, runner = prepare_generation(
+        model_alias=model_alias,
+        prompt=prompt,
+        preset_name=preset_name,
+        requested_runtime=requested_runtime,
+        fallback_allowed=fallback_allowed,
+        source=source,
+        max_tokens=max_tokens,
+        temperature=temperature,
+        stream=True,
+    )
+    return manifest, decision, runner.stream(request=request, manifest=manifest, decision=decision)
 
 
 def cmd_list_models(as_json: bool) -> int:
@@ -126,7 +180,9 @@ def cmd_list_models(as_json: bool) -> int:
     for manifest in manifests:
         print(
             f"{manifest['alias']}: source={manifest['source_type']} "
-            f"preset={manifest['default_preset']} runtimes={','.join(manifest['supported_runtimes'])}"
+            f"preset={manifest['default_preset']} runtimes={','.join(manifest['supported_runtimes'])} "
+            f"streaming={'yes' if manifest['capabilities']['supports_streaming'] else 'no'} "
+            f"reasoning={manifest['capabilities']['reasoning_format']}"
         )
     return 0
 
@@ -141,6 +197,7 @@ def cmd_run_chat(args: argparse.Namespace, source: str) -> int:
         preset=preset,
         requested_runtime=args.runtime,
         fallback_allowed=not args.no_fallback,
+        stream=False,
     )
     for line in render_runtime_banner(manifest, decision):
         print(line)

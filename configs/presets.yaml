@@ -5,6 +5,11 @@
       "runtime": "mlx",
       "description": "Stock MLX text generation path.",
       "allow_fallback": false,
+      "capabilities": {
+        "supports_streaming": true,
+        "reasoning_format": "none",
+        "reasoning_enabled_by_default": false
+      },
       "model_args": {
         "max_tokens": 256,
         "temperature": 0.7
@@ -15,6 +20,11 @@
       "runtime": "turboquant",
       "description": "Experimental TurboQuant KV cache path for compatible manifests.",
       "allow_fallback": true,
+      "capabilities": {
+        "supports_streaming": false,
+        "reasoning_format": "none",
+        "reasoning_enabled_by_default": false
+      },
       "model_args": {
         "max_tokens": 256,
         "temperature": 0.7
@@ -24,8 +34,29 @@
     {
       "name": "mlx-api",
       "runtime": "mlx",
-      "description": "Default preset for the local OpenAI-compatible API.",
+      "description": "Default preset for the local OpenAI-compatible API with streaming enabled.",
       "allow_fallback": false,
+      "capabilities": {
+        "supports_streaming": true,
+        "reasoning_format": "think_tags",
+        "reasoning_enabled_by_default": true
+      },
+      "fallback_notice": "Streamed requests fail fast when the selected runtime cannot provide real incremental output.",
+      "model_args": {
+        "max_tokens": 512,
+        "temperature": 0.2
+      }
+    },
+    {
+      "name": "mlx-api-reasoning",
+      "runtime": "mlx",
+      "description": "Reasoning-capable stock MLX API preset for manifests that emit <think> segments.",
+      "allow_fallback": false,
+      "capabilities": {
+        "supports_streaming": true,
+        "reasoning_format": "think_tags",
+        "reasoning_enabled_by_default": true
+      },
       "model_args": {
         "max_tokens": 512,
         "temperature": 0.2
@@ -35,7 +66,7 @@
   "fallback_policy": {
     "default_runtime": "mlx",
     "unsupported_model_message": "The requested model manifest does not declare TurboQuant compatibility.",
-    "unavailable_runtime_message": "TurboQuant is unavailable on this machine; the request can fall back to stock MLX when allowed."
+    "unavailable_runtime_message": "TurboQuant is unavailable on this machine; the request can fall back to stock MLX when allowed.",
+    "unsupported_streaming_message": "Requested runtimes must provide real token streaming for stream=true; unsupported adapters fail or fall back before generation starts."
   }
 }
-

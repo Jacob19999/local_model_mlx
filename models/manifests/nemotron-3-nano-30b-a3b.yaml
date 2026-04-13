@@ -6,7 +6,7 @@
     "location": "lmstudio-community/NVIDIA-Nemotron-3-Nano-30B-A3B-MLX-4bit"
   },
   "local_path": "models/cache/nemotron-3-nano-30b-a3b",
-  "default_preset": "mlx-chat",
+  "default_preset": "mlx-api-reasoning",
   "runtime": "mlx",
   "supported_runtimes": [
     "mlx"
@@ -18,5 +18,10 @@
     "nemotron",
     "mlx"
   ],
-  "notes": "Use the MLX-formatted LM Studio community repo as the canonical install source for stock MLX runs on Apple Silicon."
+  "notes": "Use the MLX-formatted LM Studio community repo as the canonical install source for stock MLX runs on Apple Silicon, with streamed chat and <think>-style reasoning enabled through the API presets.",
+  "capabilities": {
+    "supports_streaming": true,
+    "reasoning_format": "think_tags",
+    "reasoning_enabled_by_default": true
+  }
 }

@@ -6,6 +6,16 @@ from typing import Any
 
 
 @dataclass(slots=True)
+class RuntimeCapabilityProfile:
+    supports_streaming: bool = False
+    reasoning_format: str = "none"
+    reasoning_enabled_by_default: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(slots=True)
 class RuntimePreset:
     name: str
     runtime: str
@@ -13,6 +23,7 @@ class RuntimePreset:
     allow_fallback: bool = False
     model_args: dict[str, Any] = field(default_factory=dict)
     fallback_notice: str | None = None
+    capabilities: RuntimeCapabilityProfile = field(default_factory=RuntimeCapabilityProfile)
 
 
 @dataclass(slots=True)
@@ -34,6 +45,7 @@ class ModelManifest:
     api_visible: bool = True
     tags: list[str] = field(default_factory=list)
     notes: str = ""
+    capabilities: RuntimeCapabilityProfile = field(default_factory=RuntimeCapabilityProfile)
 
     def cache_path(self, repo_root: Path) -> Path:
         return (repo_root / self.local_path).resolve()
@@ -41,6 +53,7 @@ class ModelManifest:
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
         data["source"] = asdict(self.source)
+        data["capabilities"] = self.capabilities.to_dict()
         return data
 
 
@@ -66,6 +79,7 @@ class ExecutionRequest:
     source: str
     max_tokens: int = 256
     temperature: float = 0.7
+    stream: bool = False
 
 
 @dataclass(slots=True)
@@ -75,6 +89,30 @@ class RuntimeDecision:
     fallback_used: bool
     fallback_reason: str | None = None
     notices: list[str] = field(default_factory=list)
+    streaming_requested: bool = False
+    capabilities: RuntimeCapabilityProfile = field(default_factory=RuntimeCapabilityProfile)
+
+
+@dataclass(slots=True)
+class GenerationDelta:
+    sequence: int
+    role: str | None = None
+    content_delta: str = ""
+    reasoning_delta: str = ""
+    finish_reason: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(slots=True)
+class ReasoningTranscript:
+    format: str = "none"
+    raw_buffer: str = ""
+    normalized_buffer: str = ""
+    answer_buffer: str = ""
+    open_segment: bool = False
+    pending_buffer: str = ""
 
 
 @dataclass(slots=True)
@@ -83,8 +121,13 @@ class GenerationResult:
     requested_runtime: str
     active_runtime: str
     output_text: str
+    reasoning_text: str = ""
+    finish_reason: str = "stop"
+    transcript: ReasoningTranscript = field(default_factory=ReasoningTranscript)
     command: list[str] = field(default_factory=list)
     fallback_reason: str | None = None
+    capabilities: RuntimeCapabilityProfile = field(default_factory=RuntimeCapabilityProfile)
+    notices: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

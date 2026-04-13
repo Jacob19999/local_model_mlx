@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from local_model.models import RuntimePreset
+from local_model.models import RuntimeCapabilityProfile, RuntimePreset
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -43,6 +43,7 @@ def load_presets() -> dict[str, RuntimePreset]:
     raw = read_data_file(CONFIG_DIR / "presets.yaml")
     presets: dict[str, RuntimePreset] = {}
     for item in raw.get("presets", []):
+        capabilities = item.get("capabilities", {})
         preset = RuntimePreset(
             name=item["name"],
             runtime=item["runtime"],
@@ -50,7 +51,11 @@ def load_presets() -> dict[str, RuntimePreset]:
             allow_fallback=item.get("allow_fallback", False),
             model_args=item.get("model_args", {}),
             fallback_notice=item.get("fallback_notice"),
+            capabilities=RuntimeCapabilityProfile(
+                supports_streaming=bool(capabilities.get("supports_streaming", False)),
+                reasoning_format=str(capabilities.get("reasoning_format", "none")),
+                reasoning_enabled_by_default=bool(capabilities.get("reasoning_enabled_by_default", False)),
+            ),
         )
         presets[preset.name] = preset
     return presets
-

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import shutil
 from pathlib import Path
 
@@ -12,6 +13,8 @@ import local_model.registry as registry
 import local_model.runners.mlx_runner as mlx_runner
 import local_model.runners.turbo_runner as turbo_runner
 import local_model.services.install_service as install_service
+from local_model.downloads import cache_destination_for_alias, reset_destination
+from local_model.registry import register_manifest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 OPENWEBUI_DOC_PATHS = {
@@ -94,3 +97,36 @@ def valid_model_dir(tmp_path: Path) -> Path:
     (model_dir / "tokenizer.json").write_text("{}\n", encoding="utf-8")
     (model_dir / "weights.safetensors").write_text("stub\n", encoding="utf-8")
     return model_dir
+
+
+@pytest.fixture
+def register_test_manifest(isolated_repo, valid_model_dir):
+    def _register(alias: str = "demo-openwebui"):
+        destination = cache_destination_for_alias(alias)
+        reset_destination(destination)
+        shutil.copytree(valid_model_dir, destination, dirs_exist_ok=True)
+        return register_manifest(
+            alias=alias,
+            source_type="local_dir",
+            source_location=str(valid_model_dir),
+            local_path=f"models/cache/{alias}",
+        )
+
+    return _register
+
+
+@pytest.fixture
+def parse_sse_events():
+    def _parse(lines: list[str]) -> list[object]:
+        events: list[object] = []
+        for line in lines:
+            if not line.startswith("data: "):
+                continue
+            payload = line.removeprefix("data: ")
+            if payload == "[DONE]":
+                events.append(payload)
+                continue
+            events.append(json.loads(payload))
+        return events
+
+    return _parse

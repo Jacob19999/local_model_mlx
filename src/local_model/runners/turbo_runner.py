@@ -3,9 +3,10 @@ from __future__ import annotations
 import os
 import shlex
 import subprocess
+from typing import Iterator
 
 from local_model.config import REPO_ROOT
-from local_model.models import ExecutionRequest, GenerationResult, ModelManifest, RuntimeDecision
+from local_model.models import ExecutionRequest, GenerationDelta, GenerationResult, ModelManifest, RuntimeDecision
 from local_model.runners.base import BaseRunner
 
 
@@ -63,4 +64,18 @@ class TurboRunner(BaseRunner):
             output_text=completed.stdout.strip(),
             command=full_command,
             fallback_reason=decision.fallback_reason,
+            capabilities=decision.capabilities,
+            notices=decision.notices,
+        )
+
+    def stream(
+        self,
+        *,
+        request: ExecutionRequest,
+        manifest: ModelManifest,
+        decision: RuntimeDecision,
+    ) -> Iterator[GenerationDelta]:
+        raise RuntimeError(
+            "TurboQuant does not support incremental streaming in this repository. "
+            "Use stock MLX or allow an explicit fallback before generation starts."
         )

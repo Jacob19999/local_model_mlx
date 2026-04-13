@@ -25,10 +25,15 @@ def test_nemotron_manifest_defaults_are_applied(isolated_repo) -> None:
     )
 
     assert payload["display_name"] == "Install Nemotron 3 Nano 30B A3B"
-    assert payload["default_preset"] == "mlx-chat"
+    assert payload["default_preset"] == "mlx-api-reasoning"
     assert payload["runtime"] == "mlx"
     assert payload["supported_runtimes"] == ["mlx"]
     assert payload["turboquant_compatible"] is False
     assert payload["api_visible"] is True
     assert payload["tags"] == ["text-generation", "nemotron", "mlx"]
+    assert payload["capabilities"] == {
+        "supports_streaming": True,
+        "reasoning_format": "think_tags",
+        "reasoning_enabled_by_default": True,
+    }
     assert "stock MLX runs" in payload["notes"]

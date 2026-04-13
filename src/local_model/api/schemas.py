@@ -15,6 +15,7 @@ class ChatCompletionRequest(BaseModel):
     messages: list[ChatMessage]
     runtime: str | None = None
     preset: str = "mlx-api"
+    stream: bool = False
     fallback_allowed: bool = True
     max_tokens: int = Field(default=256, ge=1, le=4096)
     temperature: float = Field(default=0.2, ge=0.0, le=2.0)
@@ -26,4 +27,8 @@ class ModelCard(BaseModel):
     owned_by: str = "local-model"
     runtime: str
     turboquant_compatible: bool
-
+    default_preset: str
+    supported_runtimes: list[str]
+    supports_streaming: bool
+    reasoning_format: str
+    reasoning_enabled_by_default: bool
