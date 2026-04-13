@@ -116,11 +116,24 @@ local-model list-models --json
 local-model serve --host 127.0.0.1 --port 8000
 ```
 
+If port `8000` is already in use, start the service on another port, for example:
+
+```bash
+local-model serve --host 127.0.0.1 --port 8001
+```
+
 3. Verify the service before opening Open WebUI:
 
 ```bash
 curl http://127.0.0.1:8000/health
 curl http://127.0.0.1:8000/v1/models
+```
+
+If you started the service on `8001`, use:
+
+```bash
+curl http://127.0.0.1:8001/health
+curl http://127.0.0.1:8001/v1/models
 ```
 
 4. Start Open WebUI on the same machine:
@@ -135,6 +148,16 @@ open-webui serve
 - API URL: `http://127.0.0.1:8000/v1`
 - API key: blank or `none`
 
+If the local API is running on `8001`, use:
+
+- API URL: `http://127.0.0.1:8001/v1`
+- API key: blank or `none`
+
+Note:
+
+- Opening `http://127.0.0.1:8000/v1` or `http://127.0.0.1:8001/v1` directly in a browser returns `{"detail":"Not Found"}` by design.
+- `/v1` is the base URL Open WebUI should use, while the implemented verification endpoints are `/health` and `/v1/models`.
+
 If Open WebUI runs in Docker while `local-model serve` runs on the host, use
 `http://host.docker.internal:8000/v1` instead.
 
@@ -145,6 +168,8 @@ If Open WebUI runs in Docker while `local-model serve` runs on the host, use
 - Service unavailable: run `curl http://127.0.0.1:8000/health` and restart `local-model serve` if it fails.
 - No models visible in Open WebUI: run `curl http://127.0.0.1:8000/v1/models` and `local-model list-models --json` to confirm at least one API-visible manifest is registered.
 - Wrong endpoint configured: replace it with `http://127.0.0.1:8000/v1` for native Open WebUI or `http://host.docker.internal:8000/v1` for Dockerized Open WebUI on the same host.
+- If you moved the service to another port such as `8001`, update every URL consistently, for example `http://127.0.0.1:8001/health`, `http://127.0.0.1:8001/v1/models`, and Open WebUI API URL `http://127.0.0.1:8001/v1`.
+- If you open `/v1` directly and see `{"detail":"Not Found"}`, that does not mean the service is broken. Check `/health` and `/v1/models` instead.
 - Legacy UI commands used by habit: run `local-model ui` or `./scripts/launch_ui.sh` and follow the printed migration notice instead of expecting a launched app.
 
 ## Validation Notes
